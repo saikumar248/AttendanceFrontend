@@ -1,10 +1,10 @@
-
-import axios, { formToJSON } from "axios";
+import axios from "axios";
 import React, { useState } from "react";
 import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import "./SignUp.css";
+import { ToastContainer, toast } from 'react-toastify';
 
 const SignUp = () => {
   const [userData, setUserData] = useState({
@@ -15,6 +15,7 @@ const SignUp = () => {
     emailOtp: "",
     designation: "",
     profilePic: null,
+    departments:"",
   });
 
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const SignUp = () => {
     mobile: false,
     email: false,
   });
-  const [image, setImage] =useState(null);
+  const [image, setImage] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -44,14 +45,31 @@ const SignUp = () => {
     setUserData({ ...userData, [name]: value });
   };
 
+  const handleCheckboxChange = (event) => {
+    const { value, checked } = event.target;
+    setUserData(prevState => {
+        const currentDepts = prevState.departments ? prevState.departments.split(',') : [];
+        let newDepts;
+        if (checked) {
+            newDepts = [...currentDepts, value];
+        } else {
+            newDepts = currentDepts.filter(dept => dept !== value);
+        }
+        return {
+            ...prevState,
+            departments: newDepts.join(',')
+        };
+    });
+};
+
   const handleFileChange = (e) => {
-    setImage(e.target.files[0])
+    setImage(e.target.files[0]);
     setUserData({ ...userData, profilePic: e.target.files[0] });
   };
 
   const generateAndSendMobileOtp = async () => {
     const phoneNumber = userData.mobile;
-    console.log("Function Triggered")
+    console.log("Function Triggered");
     const Otpxyz = Math.floor(100000 + Math.random() * 900000).toString();
     setUserData({ ...userData, mobileOtp: Otpxyz });
     const message = `Dear customer, use this OTP ${Otpxyz} to signup into your Quality Thought Next account. This OTP will be valid for the next 15 mins.`;
@@ -76,7 +94,7 @@ const SignUp = () => {
       console.log(response);
       setUserData({ ...userData, emailOtp: response.data });
       alert(`OTP sent to ${userData.email}`);
-      setError(response.data); 
+      setError(response.data);
     } catch (error) {
       console.error("Error sending OTP:", error);
       setError("Failed to send OTP. Please try again.");
@@ -95,16 +113,14 @@ const SignUp = () => {
       setError("Enter a valid email");
       return;
     }
-    if (type === "mobile"){
+    if (type === "mobile") {
       generateAndSendMobileOtp();
       setOtpSentMobile(true);
     }
-    if (type === "email"){
-
+    if (type === "email") {
       generateAndSendEmailOtp();
       setOtpSentEmail(true);
-    } 
-    
+    }
   };
 
   const handleOtpVerification = (type) => {
@@ -121,39 +137,37 @@ const SignUp = () => {
     email: userData.email,
     designation: userData.designation,
     profilePic: null,
+    departments:userData.departments,
   };
 
-  const formData= new FormData();
-  formData.append("imageFile",image)
-  formData.append("user",
-    new Blob([JSON.stringify(user)],{type : "application/json"})
+  const formData = new FormData();
+  formData.append("imageFile", image);
+  formData.append(
+    "user",
+    new Blob([JSON.stringify(user)], { type: "application/json" })
   );
-  console.log("FromDtaaa",formData);
-  
+  console.log("FromDtaaa", formData);
 
-  const [imageUrl,setImageUrl] = useState("");
-
-  const fetchImage = async () => {
-    const response = await axios.get(
-      `http://localhost:9090/api/product/1/image`,
-      { responseType: "blob" }
-    );
-    setImageUrl(URL.createObjectURL(response.data));
-  };
-
-
+  // const [imageUrl, setImageUrl] = useState("");
 
   const handlePostUser = () => {
     axios
-      .post(`http://localhost:9090/api/signup`, formData,
-       {
-        headers :{
-          "Content-Type":"multipart/form-data"
-        }
-       }
-      )
+      .post(`http://localhost:9090/api/signup`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      })
       .then((response) => {
-        alert("User registered successfully!");
+        // alert("User registered successfully!");
+        navigate("/");
+        console.log("hi")
+        toast.success("User registered successfully", {
+          position: "top-right",
+          autoClose: 2000,
+        });
+      
+
+        
       })
       .catch((error) => {
         console.log(error);
@@ -162,12 +176,18 @@ const SignUp = () => {
             error.response.data.message ||
             "Sign-up failed. The user may already exist. Please try again."
           }`
+
         );
+        toast.error("The user may already exist", {
+          position: "top-right",
+          autoClose: 2000,
+        });
       });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    console.log("userData",userData);
     if (userData.mobile.length !== 10) {
       setError("Mobile number must be 10 digits");
       return;
@@ -184,17 +204,18 @@ const SignUp = () => {
     // }
     console.log(user);
     handlePostUser();
-    alert("Registration Successful!");
-    fetchImage();
+    // alert("Registration Successful!");
+
+
     // navigate("/")
   };
 
   return (
     <div className="container">
-      <div className="form-card">
+      <div className="signup-form-card">
         <h2 className="header-title">Register</h2>
         <form onSubmit={handleSubmit} className="form">
-          <div className="form-group">
+          <div className="signup-form-group">
             <label className="label">Full Name</label>
             <input
               type="text"
@@ -205,8 +226,7 @@ const SignUp = () => {
               required
             />
           </div>
-
-          <div className="form-group">
+          <div className="signup-form-group">
             <label className="label">Mobile</label>
 
             <div className="input-wrapper">
@@ -217,7 +237,6 @@ const SignUp = () => {
                 value={userData.mobile}
                 onChange={handleChange}
                 disabled={otpVerified.mobile}
-
                 required
               />
               {!otpVerified.mobile && (
@@ -252,7 +271,7 @@ const SignUp = () => {
             )}
           </div>
 
-          <div className="form-group">
+          <div className="signup-form-group">
             <label className="label">Email</label>
             <div className="input-wrapper">
               <input
@@ -296,7 +315,7 @@ const SignUp = () => {
             )}
           </div>
 
-          <div className="form-group">
+          <div className="signup-form-group">
             <label className="label">Designation</label>
             <select
               className="select"
@@ -309,12 +328,86 @@ const SignUp = () => {
               <option value="CEO">CEO</option>
               <option value="Project Manager">Project Manager</option>
               <option value="HR">HR</option>
-              <option value="Team Lead">Team Lead</option>
-              <option value="Intern">Intern</option>
             </select>
           </div>
 
-          <div className="form-group">
+          <div className="signup-form-group">
+            <label className="label">Departments</label>
+            <div className="checkbox-group">
+              <label>
+                <input
+                  type="checkbox"
+                  name="Departments"
+                  value="Java"
+                  checked={userData.departments.split(",").includes("Java")}
+                  onChange={handleCheckboxChange}
+                />
+                Java
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  name="Departments"
+                  value="MERN"
+                  checked={userData.departments.split(",").includes("MERN")}
+                  onChange={handleCheckboxChange}
+                />
+                MERN
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  name="Departments"
+                  value="Python"
+                  checked={userData.departments.split(",").includes("Python")}
+                  onChange={handleCheckboxChange}
+                />
+                Python
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  name="Departments"
+                  value="DotNet"
+                  checked={userData.departments.split(",").includes("DotNet")}
+                  onChange={handleCheckboxChange}
+                />
+                DotNet
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  name="Departments"
+                  value="DataScience"
+                  checked={userData.departments.split(",").includes("DataScience")}
+                  onChange={handleCheckboxChange}
+                />
+                Data Science
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  name="Departments"
+                  value="Scrum"
+                  checked={userData.departments.split(",").includes("Scrum")}
+                  onChange={handleCheckboxChange}
+                />
+                Scrum
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  name="Departments"
+                  value="BA"
+                  checked={userData.departments.split(",").includes("BA")}
+                  onChange={handleCheckboxChange}
+                />
+                Business Analyst 
+                              </label>
+            </div>
+          </div>
+
+          <div className="signup-form-group">
             <label className="label">Profile Picture</label>
             <input
               type="file"
@@ -328,21 +421,15 @@ const SignUp = () => {
           {error && <p className="error">{error}</p>}
 
           <button type="submit" className="submit-btn">
-            Register
+            Sign Up
           </button>
+          <ToastContainer />
 
           <p className="signin-link">
             <Link to="/">Already have an account?</Link>
           </p>
         </form>
       </div>
-
-      {/* <img
-          className="left-column-img"
-          src={imageUrl}
-          alt="{product.imageName}"
-        /> */}
-
     </div>
   );
 };

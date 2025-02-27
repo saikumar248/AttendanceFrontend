@@ -1,12 +1,12 @@
-import React, { useState , useContext} from "react";
+import React, { useState, useContext } from "react";
 import { Lock, Mail, Phone, UserCircle } from "lucide-react";
 import "./SignIn.css";
 import axios from "axios";
-import { Link } from "react-router-dom";
-import { UserContext } from "./components/context/UserContext";
+import { ToastContainer, toast, Bounce } from "react-toastify";
+import { UserContext } from "../../components/context/UserContext";
 
 import { useNavigate } from "react-router-dom";
-import logo from "./assets/rs.png";
+import logo from "../../assets/rs.png";
 
 function SignIn() {
   const { setUser } = useContext(UserContext);
@@ -30,15 +30,19 @@ function SignIn() {
     imageType: "",
     mobile: "",
     profilePicUrl: "",
+    departments: "",
   };
   const fetchImage = async (id) => {
+    console.log(id);
+
     const response = await axios.get(
       `http://localhost:9090/api/product/${id}/image`,
       { responseType: "blob" }
     );
+
     user.profilePicUrl = URL.createObjectURL(response.data);
+    console.log(user.profilePicUrl);
   };
-  fetchImage(1);
 
   const handleChange = (e) => {
     setFormData({
@@ -57,6 +61,7 @@ function SignIn() {
         ...prevFormData,
         role: response.data.designation,
       }));
+
       user.designation = response.data.designation;
       user.email = response.data.email;
       user.fullName = response.data.fullName;
@@ -64,30 +69,18 @@ function SignIn() {
       user.imageName = response.data.imageName;
       user.imageType = response.data.imageType;
       user.mobile = response.data.mobile;
-      fetchImage(user.id);
+      user.departments = response.data.departments;
+
+      await fetchImage(user.id);
+
       setUser(user);
+      console.log("User", user);
 
-      console.log("user", user);
-
-      // Get reference to the div
-//       let userDiv = document.getElementById("userDetails");
-
-//       // Create a string to display the user details
-//       let userInfo = `
-//     <p><strong>Full Name:</strong> ${user.fullName}</p>
-//     <p><strong>Designation:</strong> ${user.designation}</p>
-//     <p><strong>Email:</strong> ${user.email}</p>
-//     <p><strong>Mobile:</strong> ${user.mobile}</p>
-//     <p><strong>ID:</strong> ${user.id}</p>
-//     <p><strong>Image Name:</strong> ${user.imageName}</p>
-//     <p><strong>Image Type:</strong> ${user.imageType}</p>
-//     <p><strong>Profile Picture:</strong></p>
-//     <img src="${user.profilePicUrl}" alt="Profile Picture" width="100">
-// `;
-//     var imageUrl=user.profilePicUrl;
-
-//       // Insert the string into the div
-//       userDiv.innerHTML = userInfo;
+      sessionStorage.setItem("storedUser", JSON.stringify(user));
+      const storedUser = JSON.parse(
+        sessionStorage.getItem("storedUser") || "{}"
+      );
+      console.log("SessionStorege", storedUser);
 
       console.log("Role set in formData:", response.data.designation);
     } catch (error) {
@@ -101,18 +94,13 @@ function SignIn() {
 
   const generateAndSendOtp = async () => {
     const phoneNumber = formData.mobile;
-    const date = new Date();
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    const seconds = String(date.getSeconds()).padStart(2, "0");
-    const Otpxyz = minutes + seconds; // OTP generated using current minutes and seconds
+    const Otpxyz = Math.floor(100000 + Math.random() * 900000).toString();
     setOtp(Otpxyz);
     console.log(Otpxyz);
     console.log(otp);
     setOtpSent(true);
 
     const message = `Dear customer, use this OTP ${Otpxyz} to signup into your Quality Thought Next account. This OTP will be valid for the next 15 mins.`;
-    // const message = `Dear customer, use this OTP ${Otpxyz} to complete your signup authentication for the Chat App. This OTP will be valid for the next 15 minutes.`;
-
     const encodedMessage = encodeURIComponent(message);
     const apiUrl = `https://login4.spearuc.com/MOBILE_APPS_API/sms_api.php?type=smsquicksend&user=qtnextotp&pass=987654&sender=QTTINF&t_id=1707170494921610008&to_mobileno=${phoneNumber}&sms_text=${encodedMessage}`;
     try {
@@ -125,6 +113,10 @@ function SignIn() {
 
   const handleOtpVerification = () => {
     console.log("Otp", otp);
+    toast.success("User LoggedIn successfully", {
+      position: "top-right",
+      autoClose: 2000,
+    });
     if (otp === formData.otp) {
       if (formData.role == "CEO") {
         navigate("/super");
@@ -159,14 +151,13 @@ function SignIn() {
       <div className="form-card">
         <div className="header">
           <img src={logo} alt="Company Logo" className="company-logo" />
-          <h2 className="title">Welcome Back</h2>
+          <h2 className="title">Welcome</h2>
           <p className="subtitle">Please sign in to your account</p>
         </div>
         <form onSubmit={handleSubmit} className="form">
           <div className="form-group">
             <label className="label">Mobile Number</label>
             <div className="input-wrapper">
-              {/* <Phone className="input-icon" /> */}
               <input
                 type="text"
                 name="mobile"
@@ -178,14 +169,10 @@ function SignIn() {
                 placeholder="Enter your Mobile Number"
                 required
               />
-              {/* </div> */}
-              {/* <label className="label">Mobile</label> */}
-              {/* <div className="input-wrapper"> */}
-              {/* <input type="number" className="input" name="mobile" value={formData.mobile} onChange={handleChange} required /> */}
               {
                 <button
                   type="button"
-                  className="otp-btn"
+                  className="send-otp-btn"
                   onClick={() => handleOtpRequest("mobile")}
                 >
                   {otpSent ? "Resend OTP" : "Send OTP"}
@@ -193,7 +180,7 @@ function SignIn() {
               }
             </div>
             {otpSent && (
-              <div className="otp-section">
+              <div className="send-otp-section">
                 <input
                   type="text"
                   className="input"
@@ -204,7 +191,7 @@ function SignIn() {
                 />
                 <button
                   type="button"
-                  className="otp-btn"
+                  className="send-otp-btn"
                   onClick={handleOtpVerification}
                 >
                   Verify OTP
@@ -220,7 +207,7 @@ function SignIn() {
           </span>
         </div>
       </div>
-
+      {/* <ToastContainer position="top-right" autoClose={3000} /> */}
     </div>
   );
 }

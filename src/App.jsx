@@ -1,18 +1,16 @@
 import React from "react";
-import Admin from "./Admin";
-import SignIn from "./SignIn";
+import Admin from "./pages/Admin/Admin";
+import SignIn from "./pages/SignIn/SignIn";
 import { Routes, Route } from "react-router-dom";
-import SuperAdmin from "./SuperAdmin";
-import Intern from "./Intern";
-// import SignUp from "./SignUp";
+import SuperAdmin from "./pages/SuperAdmin/SuperAdmin";
+import Intern from "./pages/Intern/Intern";
 import { UserProvider } from "./components/context/UserContext";
-import SignUp from "./components/SignUp";
+import SignUp from "./pages/SignUp/SignUp";
+
 function App() {
   return (
     <>
-    <UserProvider>
-      {/* <Admin/> */}
-      {/* <SignIn/> */}
+      <UserProvider>
       <div>
         <div className="App">
           <Routes>
@@ -28,6 +26,7 @@ function App() {
         </div>
       </div>
       </UserProvider>
+
     </>
   );
 }
